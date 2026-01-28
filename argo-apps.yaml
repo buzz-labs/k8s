@@ -11,7 +11,7 @@ spec:
   project: default
   destination:
     name: in-cluster
-    namespace: argocd
+    namespace: production
   syncPolicy:
     automated:
       enabled: true
