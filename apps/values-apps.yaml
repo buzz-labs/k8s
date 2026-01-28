@@ -1,9 +1,0 @@
-apps:
-  repo: "https://github.com/buzz-labs/k8s.git"
-  applications:
-    - name: portal
-      path: portal
-      namespace: production
-      valueFiles:
-        - values-prod.yaml
-        - values.yaml
