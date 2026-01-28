@@ -21,7 +21,7 @@ spec:
     #   refresh: true
   source:
     path: apps
-    repoURL: "git@github.com:buzz-labs/k8s.git"
+    repoURL: "https://github.com/buzz-labs/k8s.git"
     targetRevision: main
     helm:
       valueFiles:

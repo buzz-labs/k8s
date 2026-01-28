@@ -1,5 +1,5 @@
 apps:
-  repo: "git@github.com:RequestFinance/k8s.git"
+  repo: "https://github.com/buzz-labs/k8s.git"
   applications:
     - name: portal
       path: portal
