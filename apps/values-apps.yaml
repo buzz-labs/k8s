@@ -6,4 +6,4 @@ apps:
       namespace: production
       valueFiles:
         - values-prod.yaml
-        - $additionalValues/portal/values.yaml
+        - values.yaml
