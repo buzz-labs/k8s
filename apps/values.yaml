@@ -16,6 +16,8 @@ autoscaling:
     averageValue: 300Mi
 rollingUpdate: {}
 
+applicationPort: 4000
+
 resources:
   requests:
     # CPU request needed for HPA
