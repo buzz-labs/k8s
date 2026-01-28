@@ -1,0 +1,17 @@
+fullnameOverride: portal
+
+scheduler:
+  enabled: true
+subscriber:
+  enabled: true
+subscriberRequestUpdated:
+  enabled: true
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    targetAverageValue: 5
+subscriberCreateRequests:
+  enabled: true
+subscriberCsvExport:
+  enabled: true

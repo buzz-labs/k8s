@@ -1,0 +1,72 @@
+{{- if .Values.subscriberRequestUpdated.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "portal.fullname" . }}-subscriber-request-updated
+  labels:
+    app: {{ template "portal.name" . }}-subscriber-request-updated
+    chart: {{ template "portal.chart" . }}
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+    {{- include "portal.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ template "portal.name" . }}-subscriber-request-updated
+      release: "{{ .Release.Name }}"
+  {{- if not .Values.subscriberRequestUpdated.autoscaling.enabled }}
+  replicas: {{ .Values.subscriberRequestUpdated.replicas }}
+  {{- end }}
+  strategy:
+    rollingUpdate:
+      maxSurge: {{ .Values.rollingUpdate.maxSurge | default 2 }}
+      maxUnavailable: {{ .Values.rollingUpdate.maxUnavailable | default "25%" }}
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+      labels:
+        app: {{ template "portal.name" . }}-subscriber-request-updated
+        chart: {{ template "portal.chart" . }}
+        release: {{ .Release.Name | quote }}
+        heritage: "{{ .Release.Service }}"
+    spec:
+      {{- if .Values.securityContext.enabled }}
+      securityContext:
+        fsGroup: {{ .Values.securityContext.fsGroup }}
+        runAsUser: {{ .Values.securityContext.runAsUser }}
+      {{- end }}
+      {{- if .Values.workloadIdentity }}
+      serviceAccountName: {{ template "portal.fullname" . }}-sa
+      {{- end }}
+      containers:
+      - name: subscriber-request-updated
+        image: "{{ template "portal.image" . }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+        envFrom:
+        - configMapRef:
+            name: {{ template "portal.fullname" . }}
+        - secretRef:
+            name: {{ template "portal.fullname" . }}
+        env:
+        - name: NODE_ENV
+          value: production
+        - name: NODE_OPTIONS
+          value: --max-old-space-size=768 # 3/4 of the memory limit = 3/4 * 1GiB = 0.75GiB = 768MB
+        - name: PORTAL_MODE
+          value: subscriber
+        - name: SUBSCRIBER_INCLUDE_SUBS
+          value: {{ .Values.subscriberRequestUpdated.pubsub.subscription | quote }}
+#        - name: SENTRY_SAMPLE_RATE_TRACES
+#          value: "1"
+#        - name: SENTRY_SAMPLE_RATE_TRACES_PUBSUB
+#          value: "1"
+#        - name: SENTRY_SAMPLE_RATE_PROFILES
+#          value: "1"
+        ports:
+        - name: http
+          containerPort: {{ .Values.applicationPort }}
+        resources:
+{{ toYaml .Values.subscriberRequestUpdated.resources | indent 10 }}
+{{- end -}}

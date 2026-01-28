@@ -1,0 +1,10 @@
+{{- if .Values.workloadIdentity -}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ template "portal.fullname" . }}-sa
+  labels:
+    {{- include "portal.labels" . | nindent 4 }}
+  annotations: 
+    iam.gke.io/gcp-service-account: {{ .Values.workloadIdentity }}
+{{- end -}}

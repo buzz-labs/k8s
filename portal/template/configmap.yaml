@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "portal.fullname" . }}
+  labels:
+    app: {{ template "portal.name" . }}
+    chart: {{ template "portal.chart" . }}
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+    {{- include "portal.labels" . | nindent 4 }}
+data:
+  PORT: {{ .Values.applicationPort | quote }}
+  AUTH0_AUDIENCE: {{ .Values.auth0.audience | quote }}
+  AUTH0_DOMAIN: {{ .Values.auth0.domain | quote }}
+  DATABASE_NAME: {{ .Values.db.name | quote }}
+  GOOGLE_PUBSUB_SUBSCRIPTION: {{ .Values.sync.pubsub.subscription | quote }}
+  KMS_URL: {{ .Values.kms.url | quote }}
+  KMS_USE_FOR_NEW_USER: {{ .Values.kms.enabled | quote }}
+  {{- range $key, $value := .Values.rpcs }}
+  RPC_URL_{{ $key | upper }}: {{ $value }}
+  {{- end }}
+{{- if .Values.extraEnv }}
+{{ toYaml .Values.extraEnv | indent 2 }}
+{{- end }}

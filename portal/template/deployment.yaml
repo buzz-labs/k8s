@@ -1,0 +1,101 @@
+{{$component := dict
+  "Name" "api"
+}}
+{{- with merge (dict "Component" $component) . }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "portal.fullname" . }}-{{ .Component.Name }}
+  labels:
+    app: {{ template "portal.name" . }}
+    chart: {{ template "portal.chart" . }}
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+    {{- include "portal.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicas }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app: {{ template "portal.name" . }}
+      release: "{{ .Release.Name }}"
+{{/*      FIXME: use the following instead (the deployment needs to be removed first as selectors are immutable)*/}}
+{{/*      {{- include "portal.selectorLabels" . | nindent 6 }}*/}}
+  strategy:
+    rollingUpdate:
+      maxSurge: {{ .Values.rollingUpdate.maxSurge | default 2 }}
+      maxUnavailable: {{ .Values.rollingUpdate.maxUnavailable | default "25%" }}
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+      labels:
+        app: {{ template "portal.name" . }}
+        chart: {{ template "portal.chart" . }}
+        release: {{ .Release.Name | quote }}
+        heritage: "{{ .Release.Service }}"
+        {{- include "portal.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- if .Values.securityContext.enabled }}
+      securityContext:
+        fsGroup: {{ .Values.securityContext.fsGroup }}
+        runAsUser: {{ .Values.securityContext.runAsUser }}
+      {{- end }}
+      {{- if .Values.workloadIdentity }}
+      serviceAccountName: {{ template "portal.fullname" . }}-sa
+      {{- end }}
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              {{- include "portal.selectorLabels" . | nindent 20 }}
+          matchLabelKeys:
+            - pod-template-hash
+      containers:
+        - name: api
+          image: "{{ template "portal.image" . }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+          envFrom:
+            - configMapRef:
+                name: {{ template "portal.fullname" . }}
+            - secretRef:
+                name: {{ template "portal.fullname" . }}
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: PORTAL_MODE
+              value: web
+            - name: SENTRY_SAMPLE_RATE_TRACES_SERIALIZER
+              value: "1"
+          ports:
+            - name: http
+              containerPort: {{ .Values.applicationPort }}
+          startupProbe:
+            failureThreshold: 30
+            periodSeconds: 3
+            timeoutSeconds: 4
+            exec:
+              command:
+                - /usr/bin/wget
+                - -qO
+                - /dev/null
+                - --timeout=4
+                - "http://localhost:{{ .Values.applicationPort }}/ready"
+          livenessProbe:
+            failureThreshold: 3
+            periodSeconds: 5
+            timeoutSeconds: 4
+            exec:
+              command:
+                - /usr/bin/wget
+                - -qO
+                - /dev/null
+                - --timeout=4
+                - "http://localhost:{{ .Values.applicationPort }}/live"
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+{{- end }}

@@ -1,0 +1,69 @@
+{{- if .Values.subscriber.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "portal.fullname" . }}-subscriber
+  labels:
+    app: {{ template "portal.name" . }}-subscriber
+    chart: {{ template "portal.chart" . }}
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+    {{- include "portal.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ template "portal.name" . }}-subscriber
+      release: "{{ .Release.Name }}"
+  replicas: {{ .Values.subscriber.replicas }}
+  strategy:
+    rollingUpdate:
+      maxSurge: {{ .Values.rollingUpdate.maxSurge | default 2 }}
+      maxUnavailable: {{ .Values.rollingUpdate.maxUnavailable | default "25%" }}
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+      labels:
+        app: {{ template "portal.name" . }}-subscriber
+        chart: {{ template "portal.chart" . }}
+        release: {{ .Release.Name | quote }}
+        heritage: "{{ .Release.Service }}"
+    spec:
+      {{- if .Values.securityContext.enabled }}
+      securityContext:
+        fsGroup: {{ .Values.securityContext.fsGroup }}
+        runAsUser: {{ .Values.securityContext.runAsUser }}
+      {{- end }}
+      {{- if .Values.workloadIdentity }}
+      serviceAccountName: {{ template "portal.fullname" . }}-sa
+      {{- end }}
+      priorityClassName: production-background
+      containers:
+      - name: subscriber
+        image: "{{ template "portal.image" . }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+        envFrom:
+        - configMapRef:
+            name: {{ template "portal.fullname" . }}
+        - secretRef:
+            name: {{ template "portal.fullname" . }}
+        env:
+        - name: NODE_ENV
+          value: production
+        - name: NODE_OPTIONS
+          value: --max-old-space-size=768 # 3/4 of the memory limit = 3/4 * 1GiB = 0.75GiB = 768MB
+        - name: PORTAL_MODE
+          value: subscriber
+        - name: DB_CREATE_INDEXES_ON_START
+          value: "true"
+        - name: DB_EXECUTE_MIGRATIONS_ON_START
+          value: "true"
+        - name: SUBSCRIBER_EXCLUDE_SUBS
+          value: {{ .Values.subscriberCreateRequests.pubsub.subscription }},{{ .Values.subscriberRequestUpdated.pubsub.subscription }},{{ .Values.subscriberCsvExport.pubsub.subscription }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.applicationPort }}
+        resources:
+{{ toYaml .Values.subscriber.resources | indent 10 }}
+{{- end -}}

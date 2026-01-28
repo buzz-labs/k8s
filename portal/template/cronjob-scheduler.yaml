@@ -1,0 +1,63 @@
+{{- if .Values.scheduler.enabled }}
+{{- range $key, $task := .Values.scheduler.tasks }}
+{{- with $ }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ template "portal.fullname" . }}-scheduler-{{ $task.name }}
+  labels:
+    app: {{ template "portal.name" . }}
+    chart: {{ template "portal.chart" . }}
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+    {{- include "portal.labels" . | nindent 4 }}
+spec:
+  schedule: "{{ $task.schedule }}"
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: {{ $task.timeout | default 3600 }}
+      template:
+        metadata:
+          labels:
+            task: {{ $task.name }}
+        spec:
+          {{- if .Values.workloadIdentity }}
+          serviceAccountName: {{ template "portal.fullname" . }}-sa
+          {{- end }}
+          restartPolicy: Never
+          containers:
+          - name: scheduler-{{ $task.name }}
+            image: "{{ template "portal.image" . }}"
+            imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+            command: ['/app/dist/bin/console.js']
+            args:
+              {{- range $arg := $task.args }}
+              - {{ $arg }}
+              {{- end}}
+            envFrom:
+            - configMapRef:
+                name: {{ template "portal.fullname" . }}
+            - secretRef:
+                name: {{ template "portal.fullname" . }}
+            env:
+            - name: NODE_ENV
+              value: production
+            - name: NODE_OPTIONS
+              value: --max-old-space-size=768 # 3/4 of the memory limit = 3/4 * 1GiB = 0.75GiB = 768MB
+            - name: LOAD_CONSOLE_ENV
+              value: "false"
+            - name: PORTAL_MODE
+              value: "console"
+            - name: MONGO_INIT_POOL_SIZE
+              value: "1"
+            - name: DB_CREATE_INDEXES_ON_START
+              value: "false"
+            - name: DB_EXECUTE_MIGRATIONS_ON_START
+              value: "false"
+            resources:
+{{ toYaml .Values.scheduler.resources | indent 14 }}
+---
+{{- end }}
+{{- end }}
+{{- end }}

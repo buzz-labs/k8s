@@ -1,0 +1,98 @@
+{{- range $key, $project := .Values }}
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: {{ $key }}
+  namespace: argocd
+spec:
+  clusterResourceWhitelist:
+  - group: '*'
+    kind: '*'
+  destinations:
+  - namespace: '*'
+    server: '*'
+  sourceRepos:
+  - '*'
+status: {}
+
+---
+
+
+{{- range $project.applications }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: {{ required ".name required" .name }}
+  namespace: argocd
+  {{- if .finalize }}
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  {{- end }}
+  annotations:
+    # see https://argo-cd.readthedocs.io/en/latest/operator-manual/high_availability/#manifest-paths-annotation
+    # see https://github.com/argoproj/argo-cd/blob/2e6e6cfc1244ebcddeb2f0ff153dcfe55a3abe11/util/app/path/path.go#L144
+    argocd.argoproj.io/manifest-generate-paths: /apps;/apps/*;/apps/*/*;/{{ .path }};/{{ .path }}/*;/{{ .path }}/*/*
+spec:
+  project: {{ $key }}
+  destination:
+    name: {{ .clusterName | default "in-cluster" }}
+    namespace: {{ .namespace | default "default"}}
+  sources:
+  - repoURL: {{ .repo | default $project.repo }} 
+    {{- if .path }}
+    path: {{ .path | quote }}
+    {{- end }}
+    targetRevision: {{ .revision | default "HEAD" }} 
+    {{- if .chart }}
+    chart: {{ .chart }}
+    {{- end}}
+    {{- if or .valueFiles .values }}
+    helm:
+      {{- if .values }}
+      values: 
+      {{- toYaml .values | nindent 6 }}
+      {{- end}}
+      {{- if .valueFiles }}
+      valueFiles:
+      {{- range .valueFiles }}
+        - {{ . }}
+      {{- end }}
+      {{- end }}
+      {{- if .skipCrds }}
+      skipCrds : {{ .skipCrds }}
+      {{- end }}
+    {{- end }}
+  {{- if (and .additionalSource .additionalSource.repo) }}
+  - repoURL: {{ .additionalSource.repo }}
+    targetRevision: {{ .additionalSource.revision | default "main" }} 
+    ref: {{ .additionalSource.ref | default "additionalValues" }} 
+  {{- end }}
+  syncPolicy:
+    automated:
+      enabled: true
+      prune: true
+      selfHeal: true
+    # TODO: uncomment after updating ArgoCD
+    # retry:
+    #   refresh: true
+    syncOptions:
+      - CreateNamespace=true
+      {{- if .syncOptions }}
+      {{- range .syncOptions }}
+      - {{ . }}
+      {{- end }}
+      {{- end }}
+  # ignoreDifferences:
+  #   - group: apps
+  #     kind: Deployment
+  #     jsonPointers:
+  #     - /spec/replicas
+  {{- if .ignoreDifferences}}
+    ignoreDifferences:
+  {{- toYaml .ignoreDifferences | nindent 4 }}
+  {{- end }}
+
+
+---
+{{- end}}
+{{- end}}

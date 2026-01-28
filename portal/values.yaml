@@ -1,0 +1,155 @@
+# Portal values
+image:
+  registry: eu.gcr.io/spherical-plane-479301-d5
+  repository: portal
+  pullPolicy: IfNotPresent
+replicas: 1
+autoscaling:
+  enabled: false
+  minReplicas: 3
+  maxReplicas: 5
+  targetCpu:
+    type: Utilization
+    averageUtilization: 60
+  targetMemory:
+    type: AverageValue
+    averageValue: 300Mi
+rollingUpdate: {}
+
+resources:
+  requests:
+    # CPU request needed for HPA
+    # see https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#support-for-resource-metrics
+    cpu: 200m
+    memory: 650Mi
+
+sealedSecrets: true
+
+scheduler:
+  enabled: false
+  tasks:
+    - name: recurring-invoices
+      args:
+        - invoice:recurring:create
+        - --networkType
+        - live
+      schedule: "0 11 * * *"
+    - name: subscription-bills-creation
+      args:
+        - subscriptions:bills:create:all
+        - --networkType
+        - live
+      schedule: "10 10 * * *"
+    - name: unpaid-subscription-notification
+      args:
+        - subscriptions:bills:notify-unpaid
+      schedule: "10 10 * * 1"
+    - name: subscription-seats-monitoring
+      args:
+        - subscriptions:seats:monitor-usage
+      schedule: "10 20 * * 1"
+    - name: invoice-approvers-notify-test
+      args:
+        - approval:notify
+        - --networkType
+        - test
+      schedule: "0 */2 * * 1-5"
+    - name: invoice-approvers-notify-live
+      args:
+        - approval:notify
+        - --networkType
+        - live
+      schedule: "0 */2 * * 1-5"
+    - name: payso-kyb-reminder
+      args:
+        - users:external-account:payso-kyb-reminder
+      schedule: "0 11 * * *"
+    - name: async-transaction-monitoring
+      args:
+        - tx:monitor:all
+      schedule: "*/30 * * * *"
+    - name: safe-tx-monitoring
+      args:
+        - tx:monitor:malicious-safe-transaction
+      schedule: "0 */2 * * *"
+    - name: execute-pending-quotes
+      args:
+        - crypto-to-fiat:execute-pending-quotes
+      schedule: "*/3 * * * *"
+  resources:
+    requests:
+      cpu: 200m
+      memory: 300Mi
+    limits:
+      memory: 1Gi
+
+subscriber:
+  enabled: false
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 300Mi
+    limits:
+      memory: 1Gi
+subscriberRequestUpdated:
+  enabled: false
+  replicas: 1
+  pubsub:
+    subscription: request-updated-sub
+  resources:
+    requests:
+      cpu: 200m
+      memory: 300Mi
+    limits:
+      memory: 1Gi
+subscriberCreateRequests:
+  enabled: false
+  replicas: 10
+  pubsub:
+    subscription: create-requests-sub
+  resources:
+    requests:
+      cpu: 100m
+      memory: 250Mi
+    limits:
+      memory: 400Mi
+subscriberCsvExport:
+  enabled: false
+  replicas: 1
+  pubsub:
+    subscription: csv-export-sub
+  resources:
+    requests:
+      cpu: 200m
+      memory: 300Mi
+    limits:
+      memory: 1Gi
+
+securityContext:
+  enabled: true
+  fsGroup: 1001
+  runAsUser: 1001
+
+sync:
+  enabled: false
+  replicas: 1
+  image:
+    registry: eu.gcr.io/spherical-plane-479301-d5
+    repository: api-sync
+    pullPolicy: IfNotPresent
+  debug:
+    graphql: true
+  pubsub:
+    subscription: api-sync-subscription
+  autoscaling:
+    enabled: false
+  resources:
+    requests:
+      cpu: 50m
+      memory: "0.3Gi"
+    limits:
+      cpu: 400m
+      memory: "0.75Gi"
+
+workloadIdentity: argocd-sa@spherical-plane-479301-d5.iam.gserviceaccount.com
