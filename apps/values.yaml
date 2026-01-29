@@ -2,7 +2,7 @@
 image:
   registry: eu.gcr.io/spherical-plane-479301-d5
   repository: portal
-  tag: c1d2370
+  tag: 1de61f4
   pullPolicy: IfNotPresent
 replicas: 1
 autoscaling:
