@@ -30,7 +30,7 @@ spec:
           - name: scheduler-{{ $task.name }}
             image: "{{ template "portal.image" . }}"
             imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
-            command: ['/app/dist/bin/console.js']
+            # command: ['/app/dist/bin/console.js']
             args:
               {{- range $arg := $task.args }}
               - {{ $arg }}
