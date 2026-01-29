@@ -25,4 +25,4 @@ spec:
     targetRevision: main
     helm:
       valueFiles:
-        - values-prod.yaml
+        - values-dev.yaml
