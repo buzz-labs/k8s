@@ -108,7 +108,7 @@ subscriberRequestUpdated:
       memory: 1Gi
 subscriberCreateRequests:
   enabled: false
-  replicas: 10
+  replicas: 1
   pubsub:
     subscription: create-requests-sub
   resources:
