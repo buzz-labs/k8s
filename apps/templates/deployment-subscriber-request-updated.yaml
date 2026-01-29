@@ -51,7 +51,7 @@ spec:
             name: {{ template "portal.fullname" . }}
         env:
         - name: NODE_ENV
-          value: production
+          value: development
         - name: NODE_OPTIONS
           value: --max-old-space-size=768 # 3/4 of the memory limit = 3/4 * 1GiB = 0.75GiB = 768MB
         - name: PORTAL_MODE

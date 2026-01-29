@@ -66,7 +66,7 @@ spec:
                 name: {{ template "portal.fullname" . }}
           env:
             - name: NODE_ENV
-              value: production
+              value: development
             - name: PORTAL_MODE
               value: web
             - name: SENTRY_SAMPLE_RATE_TRACES_SERIALIZER
@@ -74,28 +74,28 @@ spec:
           ports:
             - name: http
               containerPort: {{ .Values.applicationPort }}
-          startupProbe:
-            failureThreshold: 30
-            periodSeconds: 3
-            timeoutSeconds: 4
-            exec:
-              command:
-                - /usr/bin/wget
-                - -qO
-                - /dev/null
-                - --timeout=4
-                - "http://localhost:{{ .Values.applicationPort }}/ready"
-          livenessProbe:
-            failureThreshold: 3
-            periodSeconds: 5
-            timeoutSeconds: 4
-            exec:
-              command:
-                - /usr/bin/wget
-                - -qO
-                - /dev/null
-                - --timeout=4
-                - "http://localhost:{{ .Values.applicationPort }}/live"
+          # startupProbe:
+          #   failureThreshold: 30
+          #   periodSeconds: 3
+          #   timeoutSeconds: 4
+          #   exec:
+          #     command:
+          #       - /usr/bin/wget
+          #       - -qO
+          #       - /dev/null
+          #       - --timeout=4
+          #       - "http://localhost:{{ .Values.applicationPort }}/ready"
+          # livenessProbe:
+          #   failureThreshold: 3
+          #   periodSeconds: 5
+          #   timeoutSeconds: 4
+          #   exec:
+          #     command:
+          #       - /usr/bin/wget
+          #       - -qO
+          #       - /dev/null
+          #       - --timeout=4
+          #       - "http://localhost:{{ .Values.applicationPort }}/live"
           resources:
 {{ toYaml .Values.resources | indent 12 }}
 {{- end }}
